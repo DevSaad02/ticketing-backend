@@ -2,16 +2,25 @@
 
 declare(strict_types=1);
 
-use App\Application\Handlers\HttpErrorHandler;
-use App\Application\Handlers\ShutdownHandler;
-use App\Application\ResponseEmitter\ResponseEmitter;
-use App\Application\Settings\SettingsInterface;
 use DI\ContainerBuilder;
 use Slim\Factory\AppFactory;
+use App\Application\Handlers\ShutdownHandler;
 use Slim\Factory\ServerRequestCreatorFactory;
+use App\Application\Handlers\HttpErrorHandler;
+use App\Application\Settings\SettingsInterface;
+use App\Application\ResponseEmitter\ResponseEmitter;
 
 require __DIR__ . '/../vendor/autoload.php';
+// // At the very beginning of your index.php, before any other code
+// header('Access-Control-Allow-Origin: *');
+// header('Access-Control-Allow-Headers: X-Requested-With, Content-Type, Accept, Origin, Authorization');
+// header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+// header('Access-Control-Allow-Credentials: true');
 
+// // Handle preflight OPTIONS requests
+// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//     exit(0);
+// }
 // Instantiate PHP-DI ContainerBuilder
 $containerBuilder = new ContainerBuilder();
 

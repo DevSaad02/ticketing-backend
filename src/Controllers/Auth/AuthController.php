@@ -1,8 +1,9 @@
 <?php
-namespace App\Controllers;
+namespace App\Controllers\Auth;
 
 use Model;
 use App\Helpers\JwtHelper;
+use App\Controllers\HomeController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Log\LoggerInterface;
@@ -20,8 +21,10 @@ class AuthController extends HomeController
     }
 
     public function register(Request $request, Response $response) {
+        var_dump('here');exit;
         $data = $request->getParsedBody();
-
+        var_dump($data);
+        exit;
         // Basic validation
         if (!isset($data['name'], $data['email'], $data['email'], $data['password'])) {
             throw new HttpBadRequestException($request, 'Missing required fields');
