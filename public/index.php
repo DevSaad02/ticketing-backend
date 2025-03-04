@@ -11,16 +11,8 @@ use App\Application\Settings\SettingsInterface;
 use App\Application\ResponseEmitter\ResponseEmitter;
 
 require __DIR__ . '/../vendor/autoload.php';
-// // At the very beginning of your index.php, before any other code
-// header('Access-Control-Allow-Origin: *');
-// header('Access-Control-Allow-Headers: X-Requested-With, Content-Type, Accept, Origin, Authorization');
-// header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
-// header('Access-Control-Allow-Credentials: true');
+require __DIR__ . '/../src/database.php';
 
-// // Handle preflight OPTIONS requests
-// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-//     exit(0);
-// }
 // Instantiate PHP-DI ContainerBuilder
 $containerBuilder = new ContainerBuilder();
 

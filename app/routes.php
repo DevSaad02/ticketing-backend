@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Slim\App;
 use App\Helpers\JwtHelper;
+use App\Middleware\JwtMiddleware;
+use App\Controllers\ParkingController;
 use App\Controllers\Auth\AuthController;
 use Slim\Exception\HttpNotFoundException;
 use App\Application\Actions\User\ViewUserAction;
@@ -13,13 +15,9 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Interfaces\RouteCollectorProxyInterface as Group;
 
 return function (App $app) {
+
     $app->options('/{routes:.*}', function (Request $request, Response $response) {
-        // CORS Pre-Flight OPTIONS Request Handler
-        return $response
-        ->withHeader('Access-Control-Allow-Origin', 'http://localhost:3000')
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true');
+        return $response;
     });
 
     $app->get('/', function (Request $request, Response $response) {
@@ -48,7 +46,20 @@ return function (App $app) {
 
         return $next($request, $response);
     };
-    $app->post('/register', [AuthController::class, 'register']);
+    $app->group('/auth', function (Group $group) {
+
+        $group->post('/register', [AuthController::class, 'register']);
+        $group->post('/login', [AuthController::class, 'login']);
+    });
+
+    $app->group('/parking', function (Group $group) {
+
+        $group->get('', [ParkingController::class, 'getParkings']);
+        $group->post('', [ParkingController::class, 'addParking']);
+        $group->get('/{id}', [ParkingController::class, 'getParkingById']);
+        $group->put('/{id}', [ParkingController::class, 'updateParking']);
+        $group->delete('/{id}', [ParkingController::class, 'deleteParking']);
+    })->add(JwtMiddleware::class);
 
     /**
      * Catch-all route to serve a 404 Not Found page if none of the routes match
