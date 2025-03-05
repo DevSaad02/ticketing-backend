@@ -205,4 +205,26 @@ class ParkingController extends HomeController
             throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
         }
     }
+    public function getSlotsByParkingId(Request $request, Response $response, $id)
+    {
+        if (is_array($id)) {
+            $id = reset($id);
+            $id = (int) $id;
+        }
+        $this->logger->info('Fetching slots by parking id', ['id' => $id]);
+        try {
+            $slots = Model::factory('Slot')->where('parking_id', $id)->find_many();
+            return $this->response($response, [
+                'status' => 'success',
+                'message' => 'Slots fetched successfully',
+                'data' => $this->arrayConversionService->convertCollectionToArray($slots)
+            ]);
+        } catch (PDOException $e) {
+            $this->logger->error("Database error occurred while fetching slots by parking id", ['exception' => $e]);
+            throw new HttpInternalServerErrorException($request, "Database error occurred: " . $e->getMessage());
+        } catch (\Exception $e) {
+            $this->logger->error("Failed to fetch slots by parking id", ['exception' => $e]);
+            throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
+        }
+    }
 }

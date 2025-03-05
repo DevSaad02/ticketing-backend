@@ -6,6 +6,7 @@ use Slim\App;
 use App\Helpers\JwtHelper;
 use App\Middleware\JwtMiddleware;
 use App\Controllers\ParkingController;
+use App\Controllers\BookingController;
 use App\Controllers\Auth\AuthController;
 use Slim\Exception\HttpNotFoundException;
 use App\Application\Actions\User\ViewUserAction;
@@ -59,8 +60,12 @@ return function (App $app) {
         $group->get('/{id}', [ParkingController::class, 'getParkingById']);
         $group->put('/{id}', [ParkingController::class, 'updateParking']);
         $group->delete('/{id}', [ParkingController::class, 'deleteParking']);
+        $group->get('/{id}/slots', [ParkingController::class, 'getSlotsByParkingId']);
     })->add(JwtMiddleware::class);
-
+    $app->group('/booking', function (Group $group) {
+        $group->post('', [BookingController::class, 'addBooking']);
+        $group->post('/available-slots', [BookingController::class, 'getAvailableSlots']);
+    })->add(JwtMiddleware::class);
     /**
      * Catch-all route to serve a 404 Not Found page if none of the routes match
      * NOTE: make sure this route is defined last
