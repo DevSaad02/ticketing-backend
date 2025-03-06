@@ -11,7 +11,7 @@ use Model;
  * @property time $end_time
  */
 
-class Booking extends Model
+class BookedSlot extends Model
 {
      // Table name as a string
      public static $_table = 'booked_slot';

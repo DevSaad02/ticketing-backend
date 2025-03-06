@@ -11,6 +11,7 @@ use App\Controllers\Auth\AuthController;
 use Slim\Exception\HttpNotFoundException;
 use App\Application\Actions\User\ViewUserAction;
 use App\Application\Actions\User\ListUsersAction;
+use App\Controllers\HomeController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Interfaces\RouteCollectorProxyInterface as Group;
@@ -47,6 +48,9 @@ return function (App $app) {
 
         return $next($request, $response);
     };
+    $app->group('/analytics', function (Group $group) {
+        $group->get('', [HomeController::class, 'analytics']);
+    })->add(JwtMiddleware::class);
     $app->group('/auth', function (Group $group) {
 
         $group->post('/register', [AuthController::class, 'register']);
@@ -63,6 +67,7 @@ return function (App $app) {
         $group->get('/{id}/slots', [ParkingController::class, 'getSlotsByParkingId']);
     })->add(JwtMiddleware::class);
     $app->group('/booking', function (Group $group) {
+        $group->get('', [BookingController::class, 'getBookings']);
         $group->post('', [BookingController::class, 'addBooking']);
         $group->post('/available-slots', [BookingController::class, 'getAvailableSlots']);
     })->add(JwtMiddleware::class);

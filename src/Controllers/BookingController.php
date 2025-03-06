@@ -27,25 +27,25 @@ class BookingController extends HomeController
         $this->arrayConversionService = $arrayConversionService;
     }
 
-    public function getParkings(Request $request, Response $response)
+    public function getBookings(Request $request, Response $response)
     {
-        $this->logger->info('Fetching parkings');
+        $this->logger->info('Fetching bookings');
         try {
-            $parkings = Model::factory('Parking')->find_many();
-            $this->logger->info('Parkings fetched successfully');
+            $bookings = Model::factory('Booking')->find_many();
+            $this->logger->info('Bookings fetched successfully');
             return $this->response($response, [
                 'status' => 'success',
-                'message' => 'Parkings fetched successfully',
-                'data' => $this->arrayConversionService->convertCollectionToArray($parkings)
+                'message' => 'Bookings fetched successfully',
+                'data' => $this->arrayConversionService->convertCollectionToArray($bookings)
             ]);
         } catch (PDOException $e) {
             return $this->response($response, [
                 'status' => 'error',
-                'message' => 'Error fetching parkings',
+                'message' => 'Error fetching bookings',
                 'error' => $e->getMessage()
             ]);
         } catch (\Exception $e) {
-            $this->logger->error("Failed to fetch parkings", ['exception' => $e]);
+            $this->logger->error("Failed to fetch bookings", ['exception' => $e]);
             throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
         }
     }
@@ -55,12 +55,13 @@ class BookingController extends HomeController
         $this->logger->info('Adding parking');
         try {
             $data = $request->getParsedBody();
-            if (empty($data['vehicle_number']) || empty($data['contact_number']) || empty($data['date']) || empty($data['start_time']) || empty($data['end_time'])) {
+            $data['user_id'] = $request->getAttribute('user_id');
+            if (empty($data['vehicle_registration_number']) || empty($data['contact_number']) || empty($data['date']) || empty($data['start_time']) || empty($data['end_time'])) {
                 throw new HttpBadRequestException($request, "Fields are required");
             }
             // Check if booking already exists
             $booking = Model::factory('Booking')->where('date', $data['date'])->where('start_time', $data['start_time'])->where('end_time', $data['end_time'])->find_one();
-            if($booking){
+            if ($booking) {
                 throw new HttpBadRequestException($request, "Booking already exists");
             }
             // Create Booking
@@ -68,7 +69,6 @@ class BookingController extends HomeController
             $booking->user_id = $data['user_id'];
             $booking->slot_id = $data['slot_id'];
             $booking->vehicle_registration_number = $data['vehicle_registration_number'];
-            $booking->vehicle_number = $data['vehicle_number'];
             $booking->vehicle_type = $data['vehicle_type'];
             $booking->vehicle_name = $data['vehicle_name'];
             $booking->vehicle_owner = $data['vehicle_owner'];
@@ -87,8 +87,9 @@ class BookingController extends HomeController
             $booked_slot->save();
             return $this->response($response, [
                 'status' => 'success',
-                'message' => 'Booking added successfully', 
-                'data' => $booking], 201);
+                'message' => 'Booking added successfully',
+                'data' => $this->arrayConversionService->convertToArray($booking)
+            ], 201);
         } catch (PDOException $e) {
             $this->logger->error("Database error occurred while adding booking", ['exception' => $e]);
             throw new HttpInternalServerErrorException($request, "Database error occurred: " . $e->getMessage());
@@ -104,39 +105,41 @@ class BookingController extends HomeController
     public function getAvailableSlots(Request $request, Response $response)
     {
         $this->logger->info('Fetching available slots');
-        try{
+        try {
             $data = $request->getParsedBody();
             if (empty($data['parking_id']) || empty($data['date']) || empty($data['start_time']) || empty($data['end_time'])) {
                 throw new HttpBadRequestException($request, "Fields are required");
             }
+
             $parkingId = is_array($data['parking_id']) ? (int) reset($data['parking_id']) : (int) $data['parking_id'];
             $date = (string) $data['date'];
             $startTime = (string) $data['start_time'];
             $endTime = (string) $data['end_time'];
 
+            // Validate that end_time is greater than start_time
+            if ($startTime >= $endTime) {
+                throw new HttpBadRequestException($request, "End time must be greater than start time");
+            }
+
             ORM::configure('logging', true);
-    
 
-
-        
             $slots = Model::factory('Slot')
-            ->table_alias('s')
-            ->left_outer_join('booked_slot', 's.id = booked_slot.slot_id AND booked_slot.date = '.$date)
-            ->where('s.parking_id', $parkingId)
-            ->where_raw('(booked_slot.id IS NULL OR NOT (booked_slot.start_time < '.$endTime.' AND booked_slot.end_time > '.$startTime.'))')
-            ->select_expr('s.*, CASE 
+                ->table_alias('s')
+                ->left_outer_join('booked_slot', 's.id = booked_slot.slot_id AND booked_slot.date = "' . $date . '"')
+                ->where_raw('s.parking_id = "' . $parkingId . '"')
+                ->where_raw('(booked_slot.id IS NULL OR NOT (booked_slot.start_time < "' . $endTime . '" AND booked_slot.end_time > "' . $startTime . '"))')
+                ->select_expr('s.*, CASE 
                 WHEN booked_slot.id IS NOT NULL 
-                AND booked_slot.start_time < '.$endTime.' 
-                AND booked_slot.end_time > '.$startTime.'
-                THEN "reserved" ELSE "available" 
-                END AS status');
+                AND booked_slot.start_time < "' . $endTime . '" 
+                AND booked_slot.end_time > "' . $startTime . '"
+                THEN "occupied" ELSE "available" 
+                END AS slot_status');
 
-// Log the query and parameters before executing
-$lastQuery = $slots->_build_select();
-$this->logger->info("Query to be executed: " . $lastQuery);
-$slots = $slots->find_many();
+            // Log the query and parameters before executing
+            $lastQuery = $slots->_build_select();
+            $this->logger->info("Query to be executed: " . $lastQuery);
+            $slots = $slots->find_many();
 
-                
             return $this->response($response, [
                 'status' => 'success',
                 'message' => 'Available slots fetched successfully',
@@ -144,8 +147,8 @@ $slots = $slots->find_many();
             ]);
         } catch (PDOException $e) {
             $lastQuery = ORM::get_last_query();
-                $this->logger->info("Last executed query: " . $lastQuery);
-            // $this->logger->error("Database error occurred while fetching available slots", ['exception' => $e]);
+            $this->logger->info("Last executed query: " . $lastQuery);
+            $this->logger->error("Database error occurred while fetching available slots", ['exception' => $e]);
             throw new HttpInternalServerErrorException($request, "Database error occurred: " . $e->getMessage());
         } catch (HttpBadRequestException $e) {
             $this->logger->warning("Bad request: " . $e->getMessage());
@@ -155,5 +158,4 @@ $slots = $slots->find_many();
             throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
         }
     }
-
 }
