@@ -31,7 +31,13 @@ class BookingController extends HomeController
     {
         $this->logger->info('Fetching bookings');
         try {
-            $bookings = Model::factory('Booking')->find_many();
+            $user_id = $request->getAttribute('user_id');
+            $user = Model::factory('User')->where('id',$user_id);
+            if($user->role_id == 2){
+            $bookings = Model::factory('Booking')->where('user_id',$user_id)->find_many();
+            } else{
+                $bookings = Model::factory('Booking')->find_many();
+            }
             $this->logger->info('Bookings fetched successfully');
             return $this->response($response, [
                 'status' => 'success',
@@ -158,4 +164,42 @@ class BookingController extends HomeController
             throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
         }
     }
+
+    public function cancelBooking(Request $request, Response $response, $id)
+    {
+        if (is_array($id)) {
+            $id = reset($id);
+            $id = (int) $id;
+        }
+        $this->logger->info('Cancel Booking');
+        try {
+            $booking = Model::factory('Booking')->where('id',$id)->find_one();
+            $this->logger->info('Booking fetched successfully');
+            //Update booking status
+            $booking->status = "canceled";
+            $booking->save();
+            //Delete record from booked slot
+            $booked_slot = Model::factory('BookedSlot')
+            ->where('date',$booking->date)
+            ->where('start_time',$booking->start_time)
+            ->where('end_time',$booking->end_time)->find_one();
+            $booked_slot->delete();
+            return $this->response($response, [
+                'status' => 'success',
+                'message' => 'Booking status updated successfully',
+                'booking' => $this->arrayConversionService->convertToArray($booking),
+                'booked_slot' => $this->arrayConversionService->convertToArray($booked_slot)
+            ]);
+        } catch (PDOException $e) {
+            return $this->response($response, [
+                'status' => 'error',
+                'message' => 'Error updating booking status',
+                'error' => $e->getMessage()
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error("Failed to update booking status", ['exception' => $e]);
+            throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
+        }
+    }
+
 }

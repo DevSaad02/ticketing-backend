@@ -69,6 +69,7 @@ return function (App $app) {
     $app->group('/booking', function (Group $group) {
         $group->get('', [BookingController::class, 'getBookings']);
         $group->post('', [BookingController::class, 'addBooking']);
+        $group->put('/{id}/cancel', [BookingController::class, 'cancelBooking']);
         $group->post('/available-slots', [BookingController::class, 'getAvailableSlots']);
     })->add(JwtMiddleware::class);
     /**

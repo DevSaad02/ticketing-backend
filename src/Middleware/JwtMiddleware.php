@@ -38,7 +38,7 @@ class JwtMiddleware
                 ->withStatus(401);
         }
 
-        // try {
+        try {
             $token = $matches[1];
             $this->logger->info('Attempting to decode token', ['token' => $token]);
             $this->logger->info('Using secret', ['secret' => $this->secret]); // Be careful with this in production
@@ -52,22 +52,22 @@ class JwtMiddleware
             // Handle the request
             return $handler->handle($request);
 
-        // } catch (\Exception $e) {
-        //     $this->logger->error('Token validation failed', [
-        //         'error' => $e->getMessage(),
-        //         'token' => $token ?? null,
-        //         'secret' => $this->secret // Be careful with this in production
-        //     ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Token validation failed', [
+                'error' => $e->getMessage(),
+                'token' => $token ?? null,
+                'secret' => $this->secret // Be careful with this in production
+            ]);
             
-        //     $response = new SlimResponse();
-        //     $response->getBody()->write(json_encode([
-        //         'status' => 'error',
-        //         'message' => 'Invalid or expired token',
-        //         'debug' => $e->getMessage() // Remove in production
-        //     ]));
-        //     return $response
-        //         ->withHeader('Content-Type', 'application/json')
-        //         ->withStatus(401);
-        // }
+            $response = new SlimResponse();
+            $response->getBody()->write(json_encode([
+                'status' => 'error',
+                'message' => 'Invalid or expired token',
+                'debug' => $e->getMessage() // Remove in production
+            ]));
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(401);
+        }
     }
 }

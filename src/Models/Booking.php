@@ -15,6 +15,7 @@ use Model;
  * @property date $date
  * @property time $start_time
  * @property time $end_time
+ * @property string $status
  */
 
 class Booking extends Model
