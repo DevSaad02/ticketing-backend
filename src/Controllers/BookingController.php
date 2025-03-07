@@ -17,10 +17,7 @@ class BookingController extends HomeController
 {
     protected $logger;
     private $arrayConversionService;
-    // return $this->response($response, [
-    //     'status' => 'success',
-    //     'message' => 'working'
-    // ]);
+    
     public function __construct(LoggerInterface $logger, ArrayConversionService $arrayConversionService)
     {
         $this->logger = $logger;
@@ -32,11 +29,11 @@ class BookingController extends HomeController
         $this->logger->info('Fetching bookings');
         try {
             $user_id = $request->getAttribute('user_id');
-            $user = Model::factory('User')->where('id',$user_id);
-            if($user->role_id == 2){
-            $bookings = Model::factory('Booking')->where('user_id',$user_id)->find_many();
-            } else{
-                $bookings = Model::factory('Booking')->find_many();
+            $user = Model::factory('User')->where('id', $user_id)->find_one();
+            if ($user->role_id == "2") {
+                $bookings = Model::factory('Booking')->where('user_id', $user_id)->order_by_desc('id')->find_many();
+            } else {
+                $bookings = Model::factory('Booking')->order_by_desc('id')->find_many();
             }
             $this->logger->info('Bookings fetched successfully');
             return $this->response($response, [

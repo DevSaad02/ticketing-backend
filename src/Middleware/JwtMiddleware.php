@@ -52,12 +52,9 @@ class JwtMiddleware
             // Handle the request
             return $handler->handle($request);
 
-        } catch (\Exception $e) {
-            $this->logger->error('Token validation failed', [
-                'error' => $e->getMessage(),
-                'token' => $token ?? null,
-                'secret' => $this->secret // Be careful with this in production
-            ]);
+        }  catch (\UnexpectedValueException | \DomainException $e) { 
+            // Catch ONLY JWT-specific errors
+            $this->logger->error('Token validation failed', ['error' => $e->getMessage()]);
             
             $response = new SlimResponse();
             $response->getBody()->write(json_encode([

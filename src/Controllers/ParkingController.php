@@ -16,10 +16,7 @@ class ParkingController extends HomeController
 {
     protected $logger;
     private $arrayConversionService;
-    // return $this->response($response, [
-    //     'status' => 'success',
-    //     'message' => 'working'
-    // ]);
+
     public function __construct(LoggerInterface $logger, ArrayConversionService $arrayConversionService)
     {
         $this->logger = $logger;

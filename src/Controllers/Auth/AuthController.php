@@ -14,10 +14,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 class AuthController extends HomeController
 {
     protected $logger;
-    // return $this->response($response, [
-    //     'status' => 'success',
-    //     'message' => 'working'
-    // ]);
+
     public function __construct(LoggerInterface $logger) {
         $this->logger = $logger;
     }
