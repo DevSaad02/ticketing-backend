@@ -17,7 +17,7 @@ class BookingController extends HomeController
 {
     protected $logger;
     private $arrayConversionService;
-    
+
     public function __construct(LoggerInterface $logger, ArrayConversionService $arrayConversionService)
     {
         $this->logger = $logger;
@@ -63,7 +63,7 @@ class BookingController extends HomeController
                 throw new HttpBadRequestException($request, "Fields are required");
             }
             // Check if booking already exists
-            $booking = Model::factory('Booking')->where('date', $data['date'])->where('start_time', $data['start_time'])->where('end_time', $data['end_time'])->find_one();
+            $booking = Model::factory('Booking')->where('date', $data['date'])->where('start_time', $data['start_time'])->where('end_time', $data['end_time'])->where('slot_id', $data['slot_id'])->find_one();
             if ($booking) {
                 throw new HttpBadRequestException($request, "Booking already exists");
             }
@@ -126,17 +126,34 @@ class BookingController extends HomeController
 
             ORM::configure('logging', true);
 
+            // $slots = Model::factory('Slot')
+            //     ->table_alias('s')
+            //     ->left_outer_join('booked_slot', 's.id = booked_slot.slot_id AND booked_slot.date = "' . $date . '"')
+            //     ->where_raw('s.parking_id = "' . $parkingId . '"')
+            //     ->where_raw('(booked_slot.id IS NULL OR NOT (booked_slot.start_time < "' . $endTime . '" AND booked_slot.end_time > "' . $startTime . '"))')
+            //     ->select_expr('s.*, CASE 
+            //     WHEN booked_slot.id IS NOT NULL 
+            //     AND booked_slot.start_time < "' . $endTime . '" 
+            //     AND booked_slot.end_time > "' . $startTime . '"
+            //     THEN "occupied" ELSE "available" 
+            //     END AS slot_status');
             $slots = Model::factory('Slot')
                 ->table_alias('s')
-                ->left_outer_join('booked_slot', 's.id = booked_slot.slot_id AND booked_slot.date = "' . $date . '"')
-                ->where_raw('s.parking_id = "' . $parkingId . '"')
-                ->where_raw('(booked_slot.id IS NULL OR NOT (booked_slot.start_time < "' . $endTime . '" AND booked_slot.end_time > "' . $startTime . '"))')
-                ->select_expr('s.*, CASE 
-                WHEN booked_slot.id IS NOT NULL 
-                AND booked_slot.start_time < "' . $endTime . '" 
-                AND booked_slot.end_time > "' . $startTime . '"
-                THEN "occupied" ELSE "available" 
-                END AS slot_status');
+                ->left_outer_join(
+                    'booked_slot',
+                    's.id = booked_slot.slot_id 
+        AND booked_slot.date = "' . $date . '" 
+        AND booked_slot.start_time < "' . $endTime . '" 
+        AND booked_slot.end_time > "' . $startTime . '"'
+                )
+                ->where_raw('s.parking_id ="' . $parkingId . '"')
+                ->select_expr('s.*, 
+        CASE 
+            WHEN booked_slot.id IS NOT NULL 
+            THEN "occupied" 
+            ELSE "available" 
+        END AS slot_status');
+
 
             // Log the query and parameters before executing
             $lastQuery = $slots->_build_select();
@@ -170,16 +187,16 @@ class BookingController extends HomeController
         }
         $this->logger->info('Cancel Booking');
         try {
-            $booking = Model::factory('Booking')->where('id',$id)->find_one();
+            $booking = Model::factory('Booking')->where('id', $id)->find_one();
             $this->logger->info('Booking fetched successfully');
             //Update booking status
             $booking->status = "canceled";
             $booking->save();
             //Delete record from booked slot
             $booked_slot = Model::factory('BookedSlot')
-            ->where('date',$booking->date)
-            ->where('start_time',$booking->start_time)
-            ->where('end_time',$booking->end_time)->find_one();
+                ->where('date', $booking->date)
+                ->where('start_time', $booking->start_time)
+                ->where('end_time', $booking->end_time)->find_one();
             $booked_slot->delete();
             return $this->response($response, [
                 'status' => 'success',
@@ -198,5 +215,4 @@ class BookingController extends HomeController
             throw new HttpInternalServerErrorException($request, "An error occurred: " . $e->getMessage());
         }
     }
-
 }
